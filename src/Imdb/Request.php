@@ -53,7 +53,7 @@ class Request {
     
     $this->urltoopen = $url;
 
-    $this->addHeaderLine('Referer', 'http://' . $config->imdbsite . '/');
+    $this->addHeaderLine('Referer', 'https://' . $config->imdbsite . '/');
 
     if ($config->force_agent)
       curl_setopt($this->ch, CURLOPT_USERAGENT, $config->force_agent);
@@ -61,6 +61,8 @@ class Request {
       curl_setopt($this->ch, CURLOPT_USERAGENT, $config->default_agent);
     if ($config->language)
       $this->addHeaderLine('Accept-Language', $config->language);
+    if( $config->ip_address )
+      $this->addHeaderLine('X-Forwarded-For', $config->ip_address);
   }
 
   public function addHeaderLine ($name, $value) {
@@ -106,10 +108,10 @@ class Request {
    * @param string $header header field name
    * @return string header value
    */
-  public function getresponseheader($header) {
+  public function getResponseHeader($header) {
     $headers = $this->getLastResponseHeaders();
     foreach ($headers as $head) {
-      if (is_integer(strpos($head, $header))) {
+      if (is_integer(stripos($head, $header))) {
         $hstart = strpos($head, ": ");
         $head = trim(substr($head, $hstart + 2, 100));
         return $head;

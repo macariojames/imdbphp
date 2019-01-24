@@ -56,15 +56,17 @@ class Config {
 
   /**
    * Use zip compression for caching the retrieved html-files?
+   * @see $converttozip if you're changing from false to true
    * @var boolean
    */
   public $usezip = true;
 
   /**
-   * Convert non-zip cache-files to zip (check file permissions!)?
+   * Convert non-zip cache-files to zip
+   * You might want to use this if you weren't gzipping your cache files, but now are. They will be rewritten when they're used
    * @var boolean
    */
-  public $converttozip = true;
+  public $converttozip = false;
 
   /**
    * Cache expiration time - cached pages older than this value (in seconds) will
@@ -115,6 +117,14 @@ class Config {
    * @var bool
    */
   public $use_proxy = false;
+  
+  /**
+   * Set originating IP address of a client connecting to a web server through an HTTP proxy or a load balancer.
+   * Useful with language for times when Imdb uses your ip address geo-location before Accept-Language header.
+   * If this option is specified, a X-Forwarded-For header with this value will be included in requests to IMDb.
+   * @var string
+   */
+  public $ip_address = '';
   
   /**
    * Set hostname of HTTP-Proxy

@@ -11,6 +11,7 @@
 
 namespace Imdb;
 use Psr\Log\LoggerInterface;
+use Psr\SimpleCache\CacheInterface;
 
 /**
  * A person on IMDb
@@ -63,14 +64,17 @@ class Person extends MdbBase {
   protected $bio_trivia      = array();
   protected $bio_tm          = array();
   protected $bio_salary      = array();
+  protected $bio_quotes      = array();
 
     // "Publicity" page:
   protected $pub_prints      = array();
   protected $pub_movies      = array();
+  protected $pub_portraits   = array();
   protected $pub_interviews  = array();
   protected $pub_articles    = array();
   protected $pub_pictorial   = array();
   protected $pub_magcovers   = array();
+  protected $pub_pictorials  = array();
 
     // SearchDetails
   protected $SearchDetails   = array();
@@ -82,14 +86,13 @@ class Person extends MdbBase {
   }
 
   /**
-   * @param string id IMDBID to use for data retrieval
+   * @param string $id IMDBID to use for data retrieval
    * @param Config $config OPTIONAL override default config
    * @param LoggerInterface $logger OPTIONAL override default logger
    * @param CacheInterface $cache OPTIONAL override default cache
    */
   public function __construct($id, Config $config = null, LoggerInterface $logger = null, CacheInterface $cache = null) {
     parent::__construct($config, $logger, $cache);
-    $this->revision = preg_replace('|^.*?(\d+).*$|','$1','$Revision$');
     $this->setid($id);
   }
 
@@ -103,17 +106,15 @@ class Person extends MdbBase {
 
  #-----------------------------------------------[ URL to person main page ]---
   /** Set up the URL to the movie title page
-   * @method main_url
    * @return string url full URL to the current movies main page
    */
   public function main_url(){
-   return "http://".$this->imdbsite."/name/nm".$this->imdbid()."/";
+   return "https://".$this->imdbsite."/name/nm".$this->imdbid()."/";
   }
 
  #=============================================================[ Main Page ]===
  #------------------------------------------------------------------[ Name ]---
   /** Get the name of the person
-   * @method name
    * @return string name full name of the person
    * @see IMDB person page / (Main page)
    */
@@ -131,7 +132,6 @@ class Person extends MdbBase {
 
  #--------------------------------------------------------[ Photo specific ]---
   /** Get cover photo
-   * @method photo
    * @param optional boolean thumb get the thumbnail (100x140, default) or the
    *        bigger variant (400x600 - FALSE)
    * @return mixed photo (string url if found, FALSE otherwise)
@@ -187,7 +187,6 @@ class Person extends MdbBase {
   }
 
   /** Get the URL for the movies cover photo
-   * @method photo_localurl
    * @param optional boolean thumb get the thumbnail (100x140, default) or the
    *        bigger variant (400x600 - FALSE)
    * @return mixed url (string URL or FALSE if none)
@@ -211,7 +210,6 @@ class Person extends MdbBase {
 
  #----------------------------------------------------------[ Filmographie ]---
   /** Get filmography
-   * @method protected filmograf
    * @param ref array where to store the filmography
    * @param string type Which filmografie to retrieve ("actor","producer")
    */
@@ -232,7 +230,6 @@ class Person extends MdbBase {
         $year = '';
         $type = Title::MOVIE;
         if (!preg_match('!href="/title/tt(\d{7})/[^"]*"\s*>(.*?)</a>\s*</b>\n?(.*)!ims', $matches[1][$i], $mov) ) continue;
-        if ( preg_match('!<br/>\s*([^>]+)\s*</div!',$matches[0][$i],$char) ) $chname = trim($char[1]);
         $char = array();
         if (preg_match('!<span class="year_column">[^<]*(\d{4})(.*?)</span>!ims',$matches[1][$i],$ty)) $year = $ty[1];
         if ( preg_match('!href="/character/ch(\d{7})[^"]*"\s*>(.*?)</a>!ims',$matches[1][$i],$char) ) {
@@ -275,7 +272,6 @@ class Person extends MdbBase {
    *  filmography. Useful e.g. for pages without categories on. It may, however,
    *  contain duplicates if there are categories and a movie is listed in more
    *  than one of them
-   * @method movies_all
    * @return array array[0..n][mid,name,year,title_type,chid,chname,addons], where chid is
    *         the character IMDB ID, chname the character name, and addons an
    *         array of additional remarks (the things in parenthesis)
@@ -310,7 +306,6 @@ class Person extends MdbBase {
   }
 
   /** Get producers filmography
-   * @method movies_producer
    * @return array array[0..n][mid,name,year,title_type,chid,chname,addons], where chid is
    *         the character IMDB ID, chname the character name, and addons an
    *         array of additional remarks (the things in parenthesis)
@@ -322,7 +317,6 @@ class Person extends MdbBase {
   }
 
   /** Get directors filmography
-   * @method movies_director
    * @return array array[0..n][mid,name,year]
    * @see IMDB person page / (Main page)
    */
@@ -332,7 +326,6 @@ class Person extends MdbBase {
   }
 
   /** Get soundtrack filmography
-   * @method movies_soundtrack
    * @return array array[0..n][mid,name,year]
    * @see IMDB person page / (Main page)
    */
@@ -342,7 +335,6 @@ class Person extends MdbBase {
   }
 
   /** Get "Misc Crew" filmography
-   * @method movies_crew
    * @return array array[0..n][mid,name,year]
    * @see IMDB person page / (Main page)
    */
@@ -352,7 +344,6 @@ class Person extends MdbBase {
   }
 
   /** Get "Thanx" filmography
-   * @method movies_thanx
    * @return array array[0..n][mid,name,year]
    * @see IMDB person page / (Main page)
    */
@@ -362,7 +353,6 @@ class Person extends MdbBase {
   }
 
   /** Get "Self" filmography
-   * @method movies_self
    * @return array array[0..n][mid,name,year,chid,chname], where chid is the
    *         character IMDB ID, and chname the character name
    * @see IMDB person page / (Main page)
@@ -373,7 +363,6 @@ class Person extends MdbBase {
   }
 
   /** Get writers filmography
-   * @method movies_writer
    * @return array array[0..n][mid,name,year,chid,chname], where chid is the
    *         character IMDB ID, and chname the character name
    * @see IMDB person page / (Main page)
@@ -384,7 +373,6 @@ class Person extends MdbBase {
   }
 
   /** Get "Archive Footage" filmography
-   * @method movies_archive
    * @return array array[0..n][mid,name,year,chid,chname], where chid is the
    *         character IMDB ID, and chname the character name
    * @see IMDB person page / (Main page)
@@ -397,7 +385,6 @@ class Person extends MdbBase {
  #==================================================================[ /bio ]===
  #------------------------------------------------------------[ Birth Name ]---
  /** Get the birth name
-  * @method birthname
   * @return string birthname
   * @see IMDB person page /bio
   */
@@ -412,7 +399,6 @@ class Person extends MdbBase {
 
  #-------------------------------------------------------------[ Nick Name ]---
  /** Get the nick name
-  * @method nickname
   * @return array nicknames array[0..n] of strings
   * @see IMDB person page /bio
   */
@@ -434,19 +420,18 @@ class Person extends MdbBase {
 
  #------------------------------------------------------------------[ Born ]---
   /** Get Birthday
-   * @method born
    * @return array|null birthday [day,month,mon,year,place]
    *         where month is the month name, and mon the month number
    * @see IMDB person page /bio
    */
-  public function born() {
+  public function born()
+  {
     if (empty($this->birthday)) {
-      $this->getPage ("Bio");
-      if ( preg_match('|Date of Birth</td>\s*(.*)</td|iUms',$this->page["Bio"],$match) ) {
-        preg_match('|/search/name\?birth_monthday=(\d+)-(\d+).*?\n?>\d+&nbsp;(.*?)<|',$match[1],$daymon);
-        preg_match('|/search/name\?birth_year=(\d{4})|ims',$match[1],$dyear);
-        preg_match('|/search/name\?birth_place=.*?"\s*>(.*?)<|ims',$match[1],$dloc);
-        $this->birthday = array("day"=>@$daymon[2],"month"=>@$daymon[3],"mon"=>@$daymon[1],"year"=>@$dyear[1],"place"=>@$dloc[1]);
+      if (preg_match('|Born</td>(.*)</td|iUms', $this->getPage("Bio"), $match)) {
+        preg_match('|/search/name\?birth_monthday=(\d+)-(\d+).*?\n?>(.*?) \d+<|', $match[1], $daymon);
+        preg_match('|/search/name\?birth_year=(\d{4})|ims', $match[1], $dyear);
+        preg_match('|/search/name\?birth_place=.*?"\s*>(.*?)<|ims', $match[1], $dloc);
+        $this->birthday = array("day" => @$daymon[2], "month" => @$daymon[3], "mon" => @$daymon[1], "year" => @$dyear[1], "place" => @$dloc[1]);
       }
     }
     return $this->birthday;
@@ -454,7 +439,6 @@ class Person extends MdbBase {
 
  #------------------------------------------------------------------[ Died ]---
   /** Get Deathday
-   * @method died
    * @return array deathday [day,month.mon,year,place,cause]
    *         where month is the month name, and mon the month number
    * @see IMDB person page /bio
@@ -462,8 +446,8 @@ class Person extends MdbBase {
   public function died() {
     if (empty($this->deathday)) {
       $this->getPage ("Bio");
-      if (preg_match('|Date of Death</td>(.*?)</td|ims',$this->page["Bio"],$match)) {
-        preg_match('|/search/name\?death_monthday=(\d+)-(\d+).*?\n?>\d+&nbsp;(.*?)<|',$match[1],$daymon);
+      if (preg_match('|Died</td>(.*?)</td|ims',$this->page["Bio"],$match)) {
+        preg_match('|/search/name\?death_monthday=(\d+)-(\d+).*?\n?>(.*?) \d+<|',$match[1],$daymon);
         preg_match('|/search/name\?death_date=(\d{4})|ims',$match[1],$dyear);
         preg_match('|/search/name\?death_place=.*?"\s*>(.*?)<|ims',$match[1],$dloc);
         preg_match('/\(([^\)]+)\)/ims',$match[1],$dcause);
@@ -475,7 +459,6 @@ class Person extends MdbBase {
 
  #-----------------------------------------------------------[ Body Height ]---
  /** Get the body height
-  * @method height
   * @return array [imperial,metric] height in feet and inch (imperial) an meters (metric)
   * @see IMDB person page /bio
   */
@@ -492,7 +475,6 @@ class Person extends MdbBase {
 
  #----------------------------------------------------------------[ Spouse ]---
  /** Get spouse(s)
-  * @method spouse
   * @return array [0..n] of array spouses [string imdb, string name, array from,
   *         array to, string comment, string children], where from/to are array
   *         [day,month,mon,year] (month is the name, mon the number of the month),
@@ -541,7 +523,6 @@ class Person extends MdbBase {
 
  #---------------------------------------------------------------[ MiniBio ]---
  /** Get the person's mini bio
-  * @method bio
   * @return array bio array [0..n] of array[string desc, array author[url,name]]
   * @see IMDB person page /bio
   */
@@ -552,10 +533,10 @@ class Person extends MdbBase {
      if ( preg_match('!<h4 class="li_group">Mini Bio[^>]+?>(.+?)<(h4 class="li_group"|div class="article")!ims',$this->page["Bio"],$block) ) {
        preg_match_all('!<div class="soda.*?\s*<p>\s*(?<bio>.+?)\s</p>\s*<p><em>- IMDb Mini Biography By:\s*(?<author>.+?)\s*</em>!ims',$block[1],$matches);
        for ($i=0;$i<count($matches[0]);++$i) {
-         $bio_bio["desc"] = str_replace("href=\"/name/nm","href=\"http://".$this->imdbsite."/name/nm",
-                              str_replace("href=\"/title/tt","href=\"http://".$this->imdbsite."/title/tt",
-                                str_replace('/search/name','http://'.$this->imdbsite.'/search/name',$matches['bio'][$i])));
-         $author = 'Written by '.(str_replace('/search/name','http://'.$this->imdbsite.'/search/name',$matches['author'][$i]));
+         $bio_bio["desc"] = str_replace("href=\"/name/nm","href=\"https://".$this->imdbsite."/name/nm",
+                              str_replace("href=\"/title/tt","href=\"https://".$this->imdbsite."/title/tt",
+                                str_replace('/search/name','https://'.$this->imdbsite.'/search/name',$matches['bio'][$i])));
+         $author = 'Written by '.(str_replace('/search/name','https://'.$this->imdbsite.'/search/name',$matches['author'][$i]));
          if (@preg_match('!href="(.+?)"[^>]*>\s*(.*?)\s*</a>!',$author,$match)) {
            $bio_bio["author"]["url"]  = $match[1];
            $bio_bio["author"]["name"] = $match[2];
@@ -572,7 +553,6 @@ class Person extends MdbBase {
 
  #-----------------------------------------[ Helper to Trivia, Quotes, ... ]---
   /** Parse Trivia, Quotes, etc (same structs)
-   * @method protected parparse
    * @param string name
    * @param ref array res
    */
@@ -584,13 +564,12 @@ class Person extends MdbBase {
     $block = substr($this->page["Bio"],$pos_s,$pos_e - $pos_s);
     if (preg_match_all('!<div class="soda[^>]*>(.*?)</div>!ms',$block,$matches))
       foreach ($matches[1] as $match)
-        $res[] = str_replace('href="/name/nm', 'href="http://'.$this->imdbsite.'/name/nm',
-                 str_replace('href="/title/tt','href="http://'.$this->imdbsite.'/title/tt',$match));
+        $res[] = str_replace('href="/name/nm', 'href="https://'.$this->imdbsite.'/name/nm',
+                 str_replace('href="/title/tt','href="https://'.$this->imdbsite.'/title/tt',$match));
   }
 
  #----------------------------------------------------------------[ Trivia ]---
   /** Get the Trivia
-   * @method trivia
    * @return array trivia array[0..n] of string
    * @see IMDB person page /bio
    */
@@ -601,7 +580,6 @@ class Person extends MdbBase {
 
  #----------------------------------------------------------------[ Quotes ]---
   /** Get the Personal Quotes
-   * @method quotes
    * @return array quotes array[0..n] of string
    * @see IMDB person page /bio
    */
@@ -612,7 +590,6 @@ class Person extends MdbBase {
 
  #------------------------------------------------------------[ Trademarks ]---
   /** Get the "trademarks" of the person
-   * @method trademark
    * @return array trademarks array[0..n] of strings
    * @see IMDB person page /bio
    */
@@ -623,7 +600,6 @@ class Person extends MdbBase {
 
  #----------------------------------------------------------------[ Salary ]---
   /** Get the salary list
-   * @method salary
    * @return array salary array[0..n] of array movie[strings imdb,name,year], string salary
    * @see IMDB person page /bio
    */
@@ -654,24 +630,24 @@ class Person extends MdbBase {
  #============================================================[ /publicity ]===
  #-----------------------------------------------------------[ Print media ]---
   /** Print media about this person
-   * @method pubprints
    * @return array prints array[0..n] of array[author,title,place,publisher,year,isbn,url],
    *         where "place" refers to the place of publication, and "url" is a link to the ISBN
    * @see IMDB person page /publicity
    */
-  public function pubprints() {
+  public function pubprints()
+  {
     if (empty($this->pub_prints)) {
-      $this->getPage("Publicity");
-      $pos_s = strpos($this->page["Publicity"],"<h5>Biography (print)</h5>");
-      $pos_e = strpos($this->page["Publicity"],"<br",$pos_s);
-      $block = substr($this->page["Publicity"],$pos_s,$pos_e - $pos_s);
-      $arr = explode("<p>",$block);
+      $page = $this->getPage("Publicity");
+      $pos_s = strpos($page, "<h4 class=\"li_group\">Print Biographies (");
+      $pos_e = strpos($page, "</table", $pos_s);
+      $block = substr($page, $pos_s, $pos_e - $pos_s);
+      $arr = explode("<td", $block);
       $pc = count($arr);
-      for ($i=1;$i<$pc;++$i) {
-        if (preg_match('/(.*).\s*<i>(.*)<\/i>\s*((.*):|)((.*),|)\s*((\d+)\.|)\s*ISBN\s*<a href="(.*)">(.*)<\/a>/iU',$arr[$i],$match)) {
-          $this->pub_prints[] = array("author"=>$match[1],"title"=>$match[2],"place"=>trim($match[4]),"publisher"=>trim($match[6]),"year"=>$match[8],"isbn"=>$match[10],"url"=>$match[9]);
-        } elseif (preg_match('/(.*).\s*<i>(.*)<\/i>\s*((.*):|)((.*),|)\s*((\d+)\.)/iU',$arr[$i],$match)) {
-          $this->pub_prints[] = array("author"=>$match[1],"title"=>$match[2],"place"=>trim($match[4]),"publisher"=>trim($match[6]),"year"=>$match[8],"isbn"=>"","url"=>"");
+      for ($i = 1; $i < $pc; ++$i) {
+        if (preg_match('/(.*).\s*<i>(.*)<\/i>\s*((.*):|)((.*),|)\s*((\d+)\.|)\s*ISBN\s*<a href="(.*)">(.*)<\/a>/iU', $arr[$i], $match)) {
+          $this->pub_prints[] = array("author" => $match[1], "title" => htmlspecialchars_decode($match[2]), "place" => trim($match[4]), "publisher" => htmlspecialchars_decode(trim($match[6])), "year" => $match[8], "isbn" => $match[10], "url" => $match[9]);
+        } elseif (preg_match('/(.*).\s*<i>(.*)<\/i>\s*((.*):|)((.*),|)\s*((\d+)\.)/iU', $arr[$i], $match)) {
+          $this->pub_prints[] = array("author" => $match[1], "title" => htmlspecialchars_decode($match[2]), "place" => trim($match[4]), "publisher" => htmlspecialchars_decode(trim($match[6])), "year" => $match[8], "isbn" => "", "url" => "");
         }
       }
     }
@@ -680,134 +656,136 @@ class Person extends MdbBase {
 
  #----------------------------------------------[ Helper for movie parsing ]---
   /** Parse movie helper
-   * @method protected parsepubmovies
    * @param ref array res where to store the results
    * @param string page name of the page
    * @param string header header of the block on the IMDB site
    * @brief helper to pubmovies() and portrayedmovies()
    */
-  protected function parsepubmovies(&$res,$page,$header) {
-    $this->getPage($page);
-    $pos_s = strpos($this->page[$page],"<h5>$header</h5>");
-    $pos_e = strpos($this->page[$page],"<h5",$pos_s+5);
-    $skip  = strlen($header)+9;
-    $block = substr($this->page[$page],$pos_s+$skip,$pos_e - $pos_s -$skip);
-    $arr = explode("<br/><br/>",$block);
+  protected function parsepubmovies(&$res, $header) {
+    $page = $this->getPage("Publicity");
+    $pos_s = strpos($page, "<h4 class=\"li_group\">$header (");
+    $pos_e = strpos($page, "<h4", $pos_s + 5);
+    $skip = strlen($header) + 9;
+    $block = substr($page, $pos_s + $skip, $pos_e - $pos_s - $skip);
+    $arr = explode("<li", $block);
     $pc = count($arr);
-    for ($i=0;$i<$pc;++$i) {
-      if (preg_match('/href="\/title\/tt(\d+)\/">(.*)<\/a>\s*(\((\d+)\)|)/',$arr[$i],$match)) {
-        $res[] = array("imdb"=>$match[1],"name"=>$match[2],"year"=>$match[4]);
+    for ($i = 0; $i < $pc; ++$i) {
+      if (preg_match('/href="\/title\/tt(\d+)\/">(.*)<\/a>\s*(\((\d+)\)|)/', $arr[$i], $match)) {
+        $res[] = array("imdb" => $match[1], "name" => $match[2], "year" => $match[4]);
       }
     }
- }
+  }
 
  #----------------------------------------------------[ Biographical movies ]---
   /** Biographical Movies
-   * @method pubmovies
    * @return array pubmovies array[0..n] of array[imdb,name,year]
    * @see IMDB person page /publicity
    */
   public function pubmovies() {
-    if (empty($this->pub_movies)) $this->parsepubmovies($this->pub_movies,"Publicity","Biographical movies");
+    if (empty($this->pub_movies)) $this->parsepubmovies($this->pub_movies,"Film Biographies");
     return $this->pub_movies;
   }
 
  #-----------------------------------------------------------[ Portrayed in ]---
   /** List of movies protraying the person
-   * @method pubportraits
    * @return array pubmovies array[0..n] of array[imdb,name,year]
    * @see IMDB person page /publicity
    */
   public function pubportraits() {
-    if (empty($this->pub_portraits)) $this->parsepubmovies($this->pub_portraits,"Publicity","Portrayed in");
+    if (empty($this->pub_portraits)) $this->parsepubmovies($this->pub_portraits,"Portrayals");
     return $this->pub_portraits;
   }
 
  #--------------------------------------------[ Helper for Article parsing ]---
-  /** Helper for article parsing
-   * @method protected parsearticles
-   * @param ref array res where to store the results
-   * @param string page name of the page
+  /**
+   * Helper for article parsing
    * @param string title title of the block
+   * @return array
    * @brief used by interviews(), articles(), pictorials(), magcovers()
    * @see IMDB person page /publicity
    */
-  protected function parsearticles(&$res,$page,$title) {
-    $this->getPage($page);
-    $pos_s = strpos($this->page[$page],"<h5>$title</h5>");
-    if ( $pos_s === FALSE ) { $res = array(); return; }
-    $pos_e = strpos($this->page[$page],"</table",$pos_s);
-    $block = substr($this->page[$page],$pos_s,$pos_e-$pos_s);
-    @preg_match_all("|<tr>(.*)</tr>|iU",$block,$matches); // get the rows
-    $lc = count($matches[0]);
-    for ($i=0;$i<$lc;++$i) {
-      if (@preg_match('|<td.*?>(.*?)</td><td.*?>(.*?)</td>|ms',$matches[1][$i],$match)) {
-        @preg_match('/(\d{1,2}|)\s*(\S+|)\s*(\d{4}|)/i',$match[2],$dat);
-        $datum = array("day"=>$dat[1],"month"=>trim($dat[2]),"mon"=>$this->monthNo(trim($dat[2])),"year"=>trim($dat[3]),"full"=>$dat[0]);
-        if (strlen($dat[0])) $match[2] = trim(substr($match[2],strlen($dat[0])+1));
-        @preg_match('|<a name="author">(.*?)</a>|ims',$match[2],$author);
-        if (!empty($author) && strlen($author[0])) $match[2] = trim(str_replace(', by: '.$author[0],'',$match[2]));
+  protected function parsearticles($title) {
+    $page = $this->getPage("Publicity");
+    $pos_s = strpos($page, "<h4 class=\"li_group\">$title (");
+    if ($pos_s === false) {
+      return array();
+    }
+    $pos_e = strpos($page, "</table", $pos_s);
+    $block = substr($page, $pos_s, $pos_e - $pos_s);
+    @preg_match_all("|<tr(.*)</tr>|ims", $block, $matches); // get the rows
+    $res = array();
+    foreach ($matches[0] as $row) {
+      if (@preg_match('|<td.*?>(.*?)</td>.*<td.*?>(.*?)</td>|ms', $row, $match)) {
+        @preg_match('/(\d{1,2}|)\s*(\S+|)\s*(\d{4}|)/i', $match[2], $dat);
+        $datum = array("day" => $dat[1], "month" => trim($dat[2]), "mon" => $this->monthNo(trim($dat[2])), "year" => trim($dat[3]), "full" => trim($dat[0]));
+        if (strlen($dat[0])) $match[2] = trim(substr($match[2], strlen($dat[0]) + 1));
+        @preg_match('|<a name="author">(.*?)</a>|ims', $match[2], $author);
+        if (!empty($author) && strlen($author[0])) $match[2] = trim(str_replace(', by: ' . $author[0], '', $match[2]));
         if (!empty($author)) $resauthor = $author[1]; else $resauthor = '';
-        $res[] = array("inturl"=>'',"name"=>$match[1],"date"=>$datum,"details"=>trim($match[2]),"auturl"=>'',"author"=>$resauthor);
+        $res[] = array("inturl" => '', "name" => trim(strip_tags($match[1])), "date" => $datum, "details" => trim($match[2]), "auturl" => '', "author" => $resauthor);
       }
     }
+    return $res;
   }
 
  #-------------------------------------------------------------[ Interviews ]---
   /** Interviews
-   * @method interviews
    * @return array interviews array[0..n] of array[inturl,name,date,details,auturl,author]
    *         where all elements are strings - just date is an array[day,month,mon,year,full]
    *         (full: as displayed on the IMDB site)
    * @see IMDB person page /publicity
    */
   public function interviews() {
-    if (empty($this->pub_interviews)) $this->parsearticles($this->pub_interviews,"Publicity","Interview");
+    if (empty($this->pub_interviews)) {
+      $this->pub_interviews = $this->parsearticles("Interviews");
+    }
     return $this->pub_interviews;
   }
 
  #--------------------------------------------------------------[ Articles ]---
   /** Articles
-   * @method articles
    * @return array articles array[0..n] of array[inturl,name,date,details,auturl,author]
    *         where all elements are strings - just date is an array[day,month,mon,year,full]
    *         (full: as displayed on the IMDB site)
    * @see IMDB person page /publicity
    */
   public function articles() {
-    if (empty($this->pub_articles)) $this->parsearticles($this->pub_articles,"Publicity","Article");
+    if (empty($this->pub_articles)) {
+      $this->pub_articles = $this->parsearticles("Articles");
+    }
     return $this->pub_articles;
   }
 
  #-------------------------------------------------------------[ Pictorials ]---
   /** Pictorials
-   * @method pictorials
    * @return array pictorials array[0..n] of array[inturl,name,date,details,auturl,author]
    *         where all elements are strings - just date is an array[day,month,mon,year,full]
    *         (full: as displayed on the IMDB site)
    * @see IMDB person page /publicity
    */
   public function pictorials() {
-    if (empty($this->pub_pictorials)) $this->parsearticles($this->pub_pictorials,"Publicity","Pictorial");
+    if (empty($this->pub_pictorials)) {
+      $this->pub_pictorials = $this->parsearticles("Pictorials");
+    }
     return $this->pub_pictorials;
   }
 
  #--------------------------------------------------------------[ Magazines ]---
   /** Magazine cover photos
-   * @method magcovers
    * @return array magcovers array[0..n] of array[inturl,name,date,details,auturl,author]
    *         where all elements are strings - just date is an array[day,month,mon,year,full]
    *         (full: as displayed on the IMDB site)
    * @see IMDB person page /publicity
    */
   public function magcovers() {
-    if (empty($this->pub_magcovers)) $this->parsearticles($this->pub_magcovers,"Publicity","Magazine cover photo");
+    if (empty($this->pub_magcovers)) {
+      $this->pub_magcovers = $this->parsearticles("Magazine Covers");
+    }
     return $this->pub_magcovers;
   }
 
  #---------------------------------------------------------[ Search Details ]---
   /** Set some search details
-   * @method setSearchDetails
    * @param string role
    * @param integer mid IMDB ID
    * @param string name movie-name
@@ -819,7 +797,6 @@ class Person extends MdbBase {
   /** Get the search details
    *  They are just set when the imdb_person object has been initialized by the
    *  imdbpsearch class
-   * @method getSearchDetails
    * @return array SearchDetails (mid,name,role,moviename,year)
    */
   public function getSearchDetails() {
@@ -841,7 +818,7 @@ class Person extends MdbBase {
    return $urlname;
   }
   protected function buildUrl($page = null) {
-    return "http://" . $this->imdbsite . "/name/nm" . $this->imdbID . $this->getUrlSuffix($page);
+    return "https://" . $this->imdbsite . "/name/nm" . $this->imdbID . $this->getUrlSuffix($page);
   }
 
   protected function getPage($page = null) {

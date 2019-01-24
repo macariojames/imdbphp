@@ -2,6 +2,7 @@
 
 namespace Imdb;
 use Psr\Log\LoggerInterface;
+use Psr\SimpleCache\CacheInterface;
 
 /**
  * Handles requesting urls, including the caching layer
@@ -87,7 +88,7 @@ class Pages {
         if ($this->config->throwHttpExceptions) {
           $exception = new Exception\Http("Failed to retrieve url [$url]. Status code [{$req->getStatus()}]");
           $exception->HTTPStatusCode = $req->getStatus();
-          throw new $exception;
+          throw $exception;
         } else {
           return '';
         }
@@ -99,13 +100,13 @@ class Pages {
   }
 
   protected function saveToCache($url, $page) {
-    $this->cache->set($this->getCacheKey($url), $page);
+    $this->cache->set($this->getCacheKey($url), $page, $this->config->cache_expire);
   }
 
   protected function getCacheKey($url) {
     $urlParts = parse_url($url);
-    $cacheKey = $urlParts['path'] . (isset($urlParts['query']) ? '?' . $urlParts['query'] : '');
-    return trim($cacheKey, '/');
+    $cacheKey = trim($urlParts['path'], '/') . (isset($urlParts['query']) ? '?' . $urlParts['query'] : '');
+    return str_replace(array('{', '}', '(', ')', '/', '\\', '@', ':'), '.', $cacheKey);
   }
 
   protected function buildRequest($url) {

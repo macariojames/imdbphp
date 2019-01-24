@@ -10,6 +10,7 @@
 
 namespace Imdb;
 use Psr\Log\LoggerInterface;
+use Psr\SimpleCache\CacheInterface;
 
 /**
  * Accessing Movie information
@@ -18,21 +19,32 @@ use Psr\Log\LoggerInterface;
  * @copyright (c) 2002-2004 by Giorgos Giagas and (c) 2004-2009 by Itzchak Rehberg and IzzySoft
  */
 class MdbBase extends Config {
-  public $version = '5.2.0';
+  public $version = '6.1.3';
 
   protected $months = array(
       "January" => "01",
+      "Jan" => "01",
       "February" => "02",
+      "Feb" => "02",
       "March" => "03",
+      "Mar" => "03",
       "April" => "04",
+      "Apr" => "04",
       "May" => "05",
       "June" => "06",
+      "Jun" => "06",
       "July" => "07",
+      "Jul" => "07",
       "August" => "08",
+      "Aug" => "08",
       "September" => "09",
+      "Sep" => "09",
       "October" => "10",
+      "Oct" => "10",
       "November" => "11",
-      "December" => "12"
+      "Nov" => "11",
+      "December" => "12",
+      "Dec" => "12"
     );
 
   /**
@@ -64,15 +76,15 @@ class MdbBase extends Config {
 
   /**
    * @param Config $config OPTIONAL override default config
-   * @param LoggerInterface $logger OPTIONAL override default logger
-   * @param CacheInterface $cache OPTIONAL override default cache
+   * @param LoggerInterface $logger OPTIONAL override default logger `\Imdb\Logger` with a custom one
+   * @param CacheInterface $cache OPTIONAL override the default cache with any PSR-16 cache. None of the caching config in `\Imdb\Config` have any effect except cache_expire
    */
   public function __construct(Config $config = null, LoggerInterface $logger = null, CacheInterface $cache = null) {
     parent::__construct();
 
     if ($config) {
       foreach (array("language","imdbsite","cachedir","usecache","storecache","usezip","converttozip","cache_expire",
-                 "photodir","photoroot","imdb_img_url","debug","throwHttpExceptions","use_proxy",
+                 "photodir","photoroot","imdb_img_url","debug","throwHttpExceptions","use_proxy","ip_address",
                  "proxy_host","proxy_port","proxy_user","proxy_pw","default_agent","force_agent") as $key) {
         $this->$key = $config->$key;
       }
@@ -82,8 +94,6 @@ class MdbBase extends Config {
     $this->logger = empty($logger) ? new Logger($this->debug) : $logger;
     $this->cache = empty($cache) ? new Cache($this->config, $this->logger) : $cache;
     $this->pages = new Pages($this->config, $this->cache, $this->logger);
-
-    $this->cache->purge();
   }
 
   /**
@@ -101,7 +111,7 @@ class MdbBase extends Config {
   protected function setid ($id) {
     if (is_numeric($id)) {
       $this->imdbID = str_pad($id, 7, '0', STR_PAD_LEFT);
-    } elseif (preg_match("/(?:nm|tt)(\d{7})/", $id, $matches)) {
+    } elseif (preg_match("/(?:nm|tt)(\d{7,8})/", $id, $matches)) {
       $this->imdbID = $matches[1];
     } else {
       $this->debug_scalar("<BR>setid: Invalid IMDB ID '$id'!<BR>");
